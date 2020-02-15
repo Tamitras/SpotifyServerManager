@@ -93,7 +93,7 @@ namespace WcfHost
                 StartListenForConnection();
 
                 Host = new ServiceHost(typeof(WcfHost));
-                Uri baseAddress = new Uri("net.tcp://localhost:1338/Spotify");
+                Uri baseAddress = new Uri($"net.tcp://{IpAdress}:1338/Spotify");
                 NetTcpBinding binding = new NetTcpBinding();
                 Host.AddServiceEndpoint(typeof(IWcfHost), binding, baseAddress);
                 Host.Open();
