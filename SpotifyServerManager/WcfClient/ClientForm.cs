@@ -12,17 +12,36 @@ using WcfHost.Interface;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using WcfClient.UDP;
 
 namespace WcfClient
 {
     public partial class ClientForm : Form
     {
-        private static IWcfHost Host = null;
+        /// <summary>
+        /// Ipadresse des Clients
+        /// </summary>
+        public IPAddress IPAddress { get; set; }
 
+        /// <summary>
+        /// Hostname des Clients
+        /// </summary>
+        public string HostName { get; set; }
+
+        /// <summary>
+        /// Gibt an ob der Client mit einem lokalen Server verbunden ist
+        /// </summary>
+        public Boolean IsLocalServer { get; set; }
+
+        /// <summary>
+        /// IpAdresse des HauptServers
+        /// </summary>
+        public String ConnectionString { get; set; }
+
+        private static IWcfHost Host = null;
         private bool CloseApplication = false;
 
-        public IPAddress IPAddress { get; set; }
-        public string HostName { get; set; }
+
         public ClientForm()
         {
             InitializeComponent();
@@ -56,12 +75,27 @@ namespace WcfClient
             Application.Exit();
         }
 
+        /// <summary>
+        /// Init-Methode
+        /// </summary>
+        public void GetNetworkServerAdress()
+        {
+            UDPMessage message = new UDPMessage();
+            UdpClient udpClient = new UdpClient();
+            udpClient.Client.ReceiveTimeout = 5000;
+            IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 1337);
+            BroadCastSend(message, udpClient, remoteEndPoint);
+        }
+
+
+
         private void Init()
         {
             GetIpAdressAndHostname();
 
             new Thread(() =>
             {
+                this.GetNetworkServerAdress();
                 this.ConnectToSocketServer();
             }).Start();
 
@@ -85,17 +119,15 @@ namespace WcfClient
             this.IPAddress = ipAdress;
         }
 
-        private string GetHostName()
-        {
-            return Dns.GetHostName();
-        }
-
         private void ConnectToSocketServer()
         {
             try
             {
                 Int32 port = 1337;
-                TcpClient client = new TcpClient("localhost", port);
+                IPEndPoint serverAddress = new IPEndPoint(IPAddress.Parse(this.ConnectionString), port);
+                TcpClient client = new TcpClient();
+                client.Connect(serverAddress);
+
                 NetworkStream stream = client.GetStream();
                 ASCIIEncoding encoder = new ASCIIEncoding();
 
@@ -114,9 +146,9 @@ namespace WcfClient
                 }
 
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine("Exception: {0}", e);
+                Console.WriteLine($"Exception: {ex}");
             }
         }
 
@@ -147,7 +179,12 @@ namespace WcfClient
 
         private void ConnectToTcpServer()
         {
-            Uri baseAddress = new Uri("net.tcp://localhost:1338/Spotify");
+            while (string.IsNullOrEmpty(ConnectionString))
+            {
+                Thread.Sleep(1000);
+            }
+
+            Uri baseAddress = new Uri($"net.tcp://{ConnectionString}:1338/Spotify");
             EndpointAddress address = new EndpointAddress(baseAddress);
             NetTcpBinding binding = new NetTcpBinding();
             ChannelFactory<IWcfHost> factory = new ChannelFactory<IWcfHost>(binding, address);
@@ -167,7 +204,54 @@ namespace WcfClient
 
         private async void buttonStartStop_Click(object sender, EventArgs e)
         {
-           this.textBoxCurrentSongName.Text = await Host.PausePlay(this.IPAddress, this.HostName);
+            this.textBoxCurrentSongName.Text = await Host.PausePlay(this.IPAddress, this.HostName);
+        }
+
+        /// <summary>
+        /// Sendet einen Broadcast ins Netzwerk
+        /// Wenn einer darauf antwortet, dann mit seiner IPAdresse
+        /// </summary>
+        /// <returns></returns>
+        private void BroadCastSend(UDPMessage udpMessage, UdpClient udpClient, IPEndPoint remoteEndPoint)
+        {
+            IsLocalServer = true;
+            try
+            {
+                //Broadcast wird versendet
+                udpClient.Send(udpMessage.DataInBytes, udpMessage.Data.Length, udpMessage.TargetAddress, udpMessage.Port);
+                try
+                {
+                    //Daten werden aus dem udpStream gelesen
+                    udpMessage.DataInBytes = udpClient.Receive(ref remoteEndPoint);
+                    String messageFromServer = udpMessage.ReadBytes(udpMessage.DataInBytes);
+
+                    if (null != messageFromServer)
+                    {
+                        ConnectionString = messageFromServer;
+                        udpClient.Close();
+                    }
+                    else //Keine Antwort zurück bekommen
+                    {
+                        // Server im Internet wird verwendet
+                        udpClient.Close();
+                        udpClient.Client.Disconnect(true);
+                        // Wenn man die Verbindung über das Internet laufen lassen möchte
+                        //ConnectionString = Properties.Settings.Default.ConnectionString;
+                        //IsLocalServer = false;
+                    }
+                }
+                catch (Exception timeout)
+                {
+                    udpClient.Close();
+                    // Wenn man die Verbindung über das Internet laufen lassen möchte
+                    //ConnectionString = Properties.Settings.Default.ConnectionString;
+                    IsLocalServer = false;
+                }
+            }
+            catch (Exception exc)
+            {
+                Console.WriteLine(exc.Message); //TODO:
+            }
         }
     }
 }

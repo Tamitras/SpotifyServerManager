@@ -13,7 +13,7 @@ namespace WcfHost
 {
     public partial class ServerForm : Form
     {
-        ServerVM ServerVM { get; set; }
+        public ServerVM ServerVM { get; set; }
         public ServerForm()
         {
             InitializeComponent();

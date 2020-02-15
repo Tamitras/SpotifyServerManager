@@ -32,10 +32,15 @@ namespace ShortCutSpotify
             Application.Exit();
         }
 
-        private void MyForm_Disposed(object sender, EventArgs e)
+        private void ClientForm_Disposed(object sender, EventArgs e)
         {
             this.Dispose();
             Application.Exit();
+        }
+
+        private void ServerForm_Disposed(object sender, EventArgs e)
+        {
+            Environment.Exit(Environment.ExitCode);
         }
 
         private void btnServer_Click(object sender, EventArgs e)
@@ -46,6 +51,7 @@ namespace ShortCutSpotify
             Host = new WcfHost.WcfHost();
             ServerForm serverForm = new ServerForm();
             serverForm.Init(WcfHost.WcfHost.ServerVM);
+            serverForm.Disposed += ServerForm_Disposed;
 
             if (Host.Start(out message))
             {
@@ -64,7 +70,7 @@ namespace ShortCutSpotify
             // Start Application as Client
             ClientForm myForm = new ClientForm();
             myForm.Show();
-            myForm.Disposed += MyForm_Disposed;
+            myForm.Disposed += ClientForm_Disposed;
         }
     }
 }

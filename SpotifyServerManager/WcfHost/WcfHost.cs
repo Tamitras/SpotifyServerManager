@@ -24,6 +24,8 @@ namespace WcfHost
 
         private SpotifyProvider SpotifyProvider { get; set; }
 
+        private UdpClient UdpClient { get; set; }
+
         public static ServerVM ServerVM { get; set; } = new ServerVM();
         public WcfHost()
         {
@@ -123,12 +125,18 @@ namespace WcfHost
             }
 
             Console.WriteLine("exit");
+            UdpClient.Close();
             Host.Close();
             // Benachrichtige alle Member, dass der Server geschlossen wird, also schließe auch alle Verbindungen.
         }
 
         private void StartListenForConnection()
         {
+            new Thread(() =>
+            {
+                WaitForClientRequest_UDP();
+            }).Start();
+
             new Thread(() =>
             {
                 ListeningForConnection();
@@ -180,6 +188,64 @@ namespace WcfHost
                 ServerVM.WriteToLog(msg);
             }
             TcpListener.Stop();
+        }
+
+        /// <summary>
+        /// Methode die in einem eigenen Thread läuft
+        /// Wartet auf Anfrage aus dem Netzwerk
+        /// Sendet bei erfolgreicher Anfrage die IPAdresse in das Netzwerk
+        /// </summary>
+        private void WaitForClientRequest_UDP()
+        {
+            const String seperator = "-------------------------------------------------------------------------";
+            try
+            {
+                while (!CloseApplication)
+                {
+                    UdpClient = new UdpClient();
+                    Byte[] myBuffer = new Byte[4096];
+
+                    IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 1337);
+                    UdpClient.Client.Bind(remoteEndPoint);
+                    Console.WriteLine(DateTime.Now + " >>>>>>>>>>> " + "Waiting for BroadcastMessages..." + "<<<<<<<<<<");
+                    myBuffer = UdpClient.Receive(ref remoteEndPoint);
+                    Console.WriteLine(Environment.NewLine + seperator);
+                    Console.WriteLine(DateTime.Now + " Eine Anfrage kam von: " + remoteEndPoint);
+
+                    ASCIIEncoding encoder = new ASCIIEncoding();
+                    String messageFromUdp = encoder.GetString(myBuffer);
+
+                    messageFromUdp.Replace("\0", "");
+                    messageFromUdp.Trim();
+
+                    Console.WriteLine(DateTime.Now + " Empfanges Schlüsselwort: " + messageFromUdp.Trim() + " von: " + IpAdress.ToString());
+                    Byte[] bufferToClient = new Byte[0];
+                    if (messageFromUdp.Contains("<Server>")) //Server-Anfrage
+                    {
+                        Thread.Sleep(1000);
+                        bufferToClient = encoder.GetBytes(IpAdress.ToString());
+                        UdpClient.Send(bufferToClient, bufferToClient.Length, remoteEndPoint);
+                        Console.WriteLine(DateTime.Now + " Gesendeter Broadcast: "
+                            + "\""
+                            + IpAdress.ToString()
+                            + "\" "
+                            + "an: "
+                            + IpAdress.ToString());
+                    }
+                    else
+                    {
+                        Console.WriteLine(seperator);
+                        Console.WriteLine(DateTime.Now + "Anfrage war ungültig");
+                    }
+                    Console.WriteLine(seperator + Environment.NewLine);
+                    messageFromUdp = String.Empty;
+                    UdpClient.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                //Hier ging etwas schief :/
+            }
         }
 
         private void HandleClientComm(Object client) // Der Delegate erwartet einen Typ "Object"
