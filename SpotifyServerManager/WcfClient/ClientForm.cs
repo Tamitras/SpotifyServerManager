@@ -193,8 +193,14 @@ namespace WcfClient
             string message = string.Empty;
             try
             {
-                Host.Register(this.IPAddress, this.HostName, out message);
-                MessageBox.Show("Erfolgreich am Server registriert");
+                if (Host.Register(this.IPAddress, this.HostName, out message))
+                {
+                    MessageBox.Show("Erfolgreich am Server registriert");
+                }
+                else
+                {
+                    MessageBox.Show("MÖÖÖÖÖG");
+                }
             }
             catch (Exception ex)
             {
