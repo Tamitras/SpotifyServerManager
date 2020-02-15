@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace WcfHost.Models
 {
-    public class TcpMember
+    public class WcfMember
     {
         public IPAddress IPAddress { get; set; }
         public string Hostname  { get; set; }
@@ -16,7 +16,7 @@ namespace WcfHost.Models
 
         public DateTime LoginDate { get; set; }
 
-        public TcpMember()
+        public WcfMember()
         {
 
         }

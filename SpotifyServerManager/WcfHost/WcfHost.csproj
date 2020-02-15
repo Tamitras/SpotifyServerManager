@@ -51,7 +51,7 @@
   <ItemGroup>
     <Compile Include="Interface\IWcfHost.cs" />
     <Compile Include="Models\SocketMember.cs" />
-    <Compile Include="Models\TcpMember.cs" />
+    <Compile Include="Models\WcfMember.cs" />
     <Compile Include="Models\Vote.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerForm.cs">
