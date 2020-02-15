@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace WcfHost.Models
 {
-    public class Member
+    public class SocketMember
     {
         public String Name { get; set; }
         public EndPoint EndPoint { get; set; }
@@ -16,7 +16,7 @@ namespace WcfHost.Models
         public DateTime LoginTime { get; set; }
 
 
-        public Member(TcpClient client)
+        public SocketMember(TcpClient client)
         {
             TcpClient = client;
             EndPoint = client.Client.LocalEndPoint;

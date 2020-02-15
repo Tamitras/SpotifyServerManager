@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SpotifyService;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -6,6 +7,7 @@ using System.Net.Sockets;
 using System.ServiceModel;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using WcfHost.Interface;
 using WcfHost.Models;
 
@@ -16,21 +18,39 @@ namespace WcfHost
     {
         public bool CloseApplication { get; set; }
         private IPAddress IpAdress { get; set; }
-        private List<Member> ListOfAllConnectedMember { get; set; }
+        private List<SocketMember> ListOfAllConnectedMember { get; set; }
         private TcpListener TcpListener { get; set; }
         private ServiceHost Host { get; set; }
 
-        public static ServerVM ServerVM { get; set; } = new ServerVM();
-        public WcfHost() { }
+        private SpotifyProvider SpotifyProvider { get; set; }
 
-        public bool Register(string ipAdress, string username, out string message)
+        public static ServerVM ServerVM { get; set; } = new ServerVM();
+        public WcfHost()
+        {
+            SpotifyProvider = new SpotifyProvider();
+            SpotifyProvider.Connect();
+        }
+
+        public bool Register(IPAddress ipAdress, string username, out string message)
         {
             Console.WriteLine($"Benutzer mit der IP: {ipAdress} hat sich erfolgreich am Server registriert");
             message = "Hier könnte ihre Werbung stehen";
 
-            ServerVM.AddUser($"{username} | <{ipAdress}>");
+            ServerVM.AddUser(
+                new TcpMember()
+                {
+                    Hostname = username,
+                    IPAddress = ipAdress,
+                    LoginDate = DateTime.Now
+                });
 
             return true;
+        }
+
+        public async Task<string> PausePlay(IPAddress ipAdress, string hostname)
+        {
+            string res = await SpotifyProvider.PerformPlayAsync();
+            return res;
         }
 
         /// <summary>
@@ -38,7 +58,7 @@ namespace WcfHost
         /// </summary>
         /// <param name="ipAdress"></param>
         /// <returns></returns>
-        public bool Exit(string ipAdress)
+        public bool Exit(IPAddress ipAdress)
         {
             bool ret = true;
             try
@@ -47,6 +67,7 @@ namespace WcfHost
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 ret = false;
             }
             return ret;
@@ -60,8 +81,10 @@ namespace WcfHost
             try
             {
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler(CurrentDomain_ProcessExit);
+#pragma warning disable CS0618 // Typ oder Element ist veraltet
                 IpAdress = Dns.GetHostByName(Dns.GetHostName()).AddressList[0];
-                ListOfAllConnectedMember = new List<Member>();
+#pragma warning restore CS0618 // Typ oder Element ist veraltet
+                ListOfAllConnectedMember = new List<SocketMember>();
                 TcpListener = new TcpListener(IPAddress.Any, 1337);
                 StartListenForConnection();
 
@@ -86,11 +109,17 @@ namespace WcfHost
         }
 
 
+        public void VoteSkip(IPAddress ipAdress, string hostname)
+        {
+            // Benachrichtige alle User bis auf den User, der getriggered hat
+            // Setze Vote-Status auf in Progress/Idle --> So dass kein weiterer Vote angestoßen werden kann
+        }
+
         private void CurrentDomain_ProcessExit(object sender, EventArgs e)
         {
-            foreach (var member in ListOfAllConnectedMember)
+            foreach (var sMember in ListOfAllConnectedMember)
             {
-                member.SendToClient("Close");
+                sMember.SendToClient("Close");
             }
 
             Console.WriteLine("exit");
@@ -120,7 +149,7 @@ namespace WcfHost
                         TcpClient client = TcpListener.AcceptTcpClient();
                         if (null != client)
                         {
-                            Member member = new Member(client);
+                            SocketMember member = new SocketMember(client);
                             NetworkStream clientStream = client.GetStream();
 
                             byte[] message = new byte[4096]; // Dies ist unser Buffer
@@ -156,7 +185,7 @@ namespace WcfHost
         private void HandleClientComm(Object client) // Der Delegate erwartet einen Typ "Object"
         {
             TcpClient Client = (TcpClient)client; // Diesen casten wir in "TcpClient"
-            Member tempMember = ListOfAllConnectedMember.SingleOrDefault(c => c.TcpClient == Client);
+            SocketMember tempMember = ListOfAllConnectedMember.SingleOrDefault(c => c.TcpClient == Client);
 
             if (tempMember.Name.Contains('\0'))
             {
@@ -172,5 +201,7 @@ namespace WcfHost
             Console.WriteLine($"<{tempMember.Name}> hat sich angemeldet");
             ServerVM.WriteToLog($"<{tempMember.Name}> hat sich angemeldet");
         }
+
+
     }
 }

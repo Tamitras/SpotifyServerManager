@@ -1,41 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using WcfHost.Models;
 
 namespace WcfHost
 {
     public class ServerVM
     {
-        public List<string> ConnectedUsers { get; set; }
+        public List<TcpMember> ConnectedMembers { get; set; }
 
-        public delegate void UserHasConnectedDelegate(string user);
         public delegate void LogHasChangedDelegate(string msg);
-
-        public event UserHasConnectedDelegate UserHasConnected;
-        public event UserHasConnectedDelegate UserHasDisconected;
         public event LogHasChangedDelegate LogHasChanged;
+
+        public delegate void MemberHasChangedDelegate();
+        public event MemberHasChangedDelegate MemberHasChanged;
 
         public ServerVM()
         {
-            this.ConnectedUsers = new List<string>();
+            this.ConnectedMembers = new List<TcpMember>();
         }
 
-        public void AddUser(string userCredentials)
+        public void AddUser(TcpMember member)
         {
-            this.ConnectedUsers.Add(userCredentials);
-            this.UserHasConnected?.Invoke(userCredentials);
+            this.ConnectedMembers.Add(member);
+            this.MemberHasChanged();
         }
 
-        public void RemoveUser(string ipadress)
+        public void RemoveUser(IPAddress ipadress)
         {
-            var userToDelete = this.ConnectedUsers.Where(c => c.Contains(ipadress)).SingleOrDefault();
+            var userToDelete = this.ConnectedMembers.Where(c => c.IPAddress.Equals(ipadress)).SingleOrDefault();
             if(userToDelete != null)
             {
-                this.ConnectedUsers.Remove(userToDelete);
-                this.UserHasDisconected?.Invoke(ipadress);
-                this.WriteToLog(userToDelete + " hat keine Lust mehr und ist gegangen");
+                this.ConnectedMembers.Remove(userToDelete);
+                this.MemberHasChanged();
+                this.WriteToLog(userToDelete.Hostname + " hat keine Lust mehr und ist gegangen");
             }
         }
 
@@ -43,6 +44,5 @@ namespace WcfHost
         {
             this.LogHasChanged?.Invoke(s);
         }
-
     }
 }

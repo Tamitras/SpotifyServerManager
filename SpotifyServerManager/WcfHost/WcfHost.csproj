@@ -50,7 +50,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Interface\IWcfHost.cs" />
-    <Compile Include="Models\Member.cs" />
+    <Compile Include="Models\SocketMember.cs" />
+    <Compile Include="Models\TcpMember.cs" />
+    <Compile Include="Models\Vote.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerForm.cs">
       <SubType>Form</SubType>
@@ -63,11 +65,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Properties\DataSources\WcfHost.Models.TcpMember.datasource" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="ServerForm.resx">
       <DependentUpon>ServerForm.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SpotifyService\SpotifyService.csproj">
+      <Project>{BC2CC03B-11CF-4F22-8050-FAE18709D6F4}</Project>
+      <Name>SpotifyService</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

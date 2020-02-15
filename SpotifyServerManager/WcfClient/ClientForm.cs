@@ -20,6 +20,9 @@ namespace WcfClient
         private static IWcfHost Host = null;
 
         private bool CloseApplication = false;
+
+        public IPAddress IPAddress { get; set; }
+        public string HostName { get; set; }
         public ClientForm()
         {
             InitializeComponent();
@@ -40,10 +43,11 @@ namespace WcfClient
             {
                 try
                 {
-                    Host.Exit(GetIpAdress().ToString());
+                    Host.Exit(this.IPAddress);
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine(ex.Message);
                     // Server wurde geschlossen!
                 }
             }
@@ -54,6 +58,8 @@ namespace WcfClient
 
         private void Init()
         {
+            GetIpAdressAndHostname();
+
             new Thread(() =>
             {
                 this.ConnectToSocketServer();
@@ -65,14 +71,18 @@ namespace WcfClient
             }).Start();
         }
 
-        private IPAddress GetIpAdress()
+        private void GetIpAdressAndHostname()
         {
-            string hostName = Dns.GetHostName(); // Retrive the Name of HOST  
+            this.HostName = Dns.GetHostName(); // Retrive the Name of HOST  
             //string myIP = Dns.GetHostByName(hostName).AddressList[0].ToString();
-            var hostEntry = Dns.GetHostEntry(hostName);
-            var ipAdresses = hostEntry.AddressList.Where(c => c.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).ToList();
+            var hostEntry = Dns.GetHostEntry(HostName);
+            var ipAdresses = hostEntry.AddressList.Where(c => c.AddressFamily == AddressFamily.InterNetwork).ToList();
+
+#pragma warning disable CS0618 // Typ oder Element ist veraltet
             var ipAdress = ipAdresses.Where(c => c.Address.ToString().StartsWith("192")).FirstOrDefault();
-            return ipAdress;
+#pragma warning restore CS0618 // Typ oder Element ist veraltet
+
+            this.IPAddress = ipAdress;
         }
 
         private string GetHostName()
@@ -92,7 +102,7 @@ namespace WcfClient
                 Thread.Sleep(20);
 
                 // Überlieferung des Hostnames
-                Byte[] bufferToClient = encoder.GetBytes(this.GetHostName());
+                Byte[] bufferToClient = encoder.GetBytes(this.HostName);
                 client.GetStream().Write(bufferToClient, 0, bufferToClient.Length);
                 client.GetStream().Flush();
 
@@ -146,13 +156,18 @@ namespace WcfClient
             string message = string.Empty;
             try
             {
-                Host.Register(this.GetIpAdress().ToString(), this.GetHostName(), out message);
+                Host.Register(this.IPAddress, this.HostName, out message);
                 MessageBox.Show("Erfolgreich am Server registriert");
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message);
             }
+        }
+
+        private async void buttonStartStop_Click(object sender, EventArgs e)
+        {
+           this.textBoxCurrentSongName.Text = await Host.PausePlay(this.IPAddress, this.HostName);
         }
     }
 }

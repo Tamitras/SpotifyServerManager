@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using WcfHost.Models;
 
 namespace WcfHost
 {
@@ -34,36 +35,32 @@ namespace WcfHost
         public void Init(ServerVM serverVM)
         {
             ServerVM = serverVM;
+            this.bindingSourceConnectedMember.DataSource = serverVM.ConnectedMembers;
+            //this.bindingSourceConnectedMember.
 
-            this.ServerVM.UserHasConnected += new ServerVM.UserHasConnectedDelegate(UserHasConnected);
-            this.ServerVM.UserHasDisconected += new ServerVM.UserHasConnectedDelegate(UserHasDisconected);
-            this.ServerVM.LogHasChanged += ServerVM_LogHasChanged;
+            this.ServerVM.LogHasChanged += LogHasChanged;
+
+            this.ServerVM.MemberHasChanged += new ServerVM.MemberHasChangedDelegate(MemberHasChanged);
+
+            // Anonymus Event Delegates
+            //bs.AddingNew += (s, ev) => Debug.WriteLine("AddingNew");
         }
 
-        private void ServerVM_LogHasChanged(string msg)
+        private void MemberHasChanged()
+        {
+            InvokeIfRequired(this, (MethodInvoker)delegate ()
+            {
+                //this.listBoxUsers.Items.Add(member);
+                this.bindingSourceConnectedMember.ResetBindings(false);
+                this.Refresh();
+            });
+        }  
+
+        private void LogHasChanged(string msg)
         {
             InvokeIfRequired(this, (MethodInvoker)delegate ()
             {
                 this.textBoxLog.Text +=  $"<{DateTime.Now}>: " + msg + Environment.NewLine;
-                this.Refresh();
-            });
-        }
-
-        private void UserHasDisconected(string user)
-        {
-            InvokeIfRequired(this, (MethodInvoker)delegate ()
-            {
-                this.listBoxUsers.Items.Clear();
-                this.listBoxUsers.Items.AddRange(this.ServerVM.ConnectedUsers.ToArray());
-                this.Refresh();
-            });
-        }
-
-        public void UserHasConnected(string user)
-        {
-            InvokeIfRequired(this, (MethodInvoker)delegate ()
-            {
-                this.listBoxUsers.Items.Add(user);
                 this.Refresh();
             });
         }
