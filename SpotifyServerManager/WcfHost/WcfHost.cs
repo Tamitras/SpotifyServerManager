@@ -83,9 +83,11 @@ namespace WcfHost
             try
             {
                 AppDomain.CurrentDomain.ProcessExit += new EventHandler(CurrentDomain_ProcessExit);
-#pragma warning disable CS0618 // Typ oder Element ist veraltet
-                IpAdress = Dns.GetHostByName(Dns.GetHostName()).AddressList[0];
-#pragma warning restore CS0618 // Typ oder Element ist veraltet
+
+                var adresses = Dns.GetHostAddresses(Dns.GetHostName());
+                var ipAdresses = adresses.Where(c => c.AddressFamily == AddressFamily.InterNetwork).ToList();
+                IpAdress = ipAdresses.Where(c => c.Address.ToString().StartsWith("192")).FirstOrDefault();
+
                 ListOfAllConnectedMember = new List<SocketMember>();
                 TcpListener = new TcpListener(IPAddress.Any, 1337);
                 StartListenForConnection();
