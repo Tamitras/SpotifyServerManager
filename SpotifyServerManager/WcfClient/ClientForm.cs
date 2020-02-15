@@ -113,7 +113,7 @@ namespace WcfClient
             var ipAdresses = hostEntry.AddressList.Where(c => c.AddressFamily == AddressFamily.InterNetwork).ToList();
 
 #pragma warning disable CS0618 // Typ oder Element ist veraltet
-            var ipAdress = ipAdresses.Where(c => c.Address.ToString().StartsWith("192")).FirstOrDefault();
+            var ipAdress = ipAdresses.FirstOrDefault();
 #pragma warning restore CS0618 // Typ oder Element ist veraltet
 
             this.IPAddress = ipAdress;
@@ -183,6 +183,8 @@ namespace WcfClient
             {
                 Thread.Sleep(1000);
             }
+
+            Thread.Sleep(1000);
 
             Uri baseAddress = new Uri($"net.tcp://{ConnectionString}:1338/Spotify");
             EndpointAddress address = new EndpointAddress(baseAddress);
