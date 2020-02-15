@@ -95,6 +95,8 @@ namespace WcfHost
                 Host = new ServiceHost(typeof(WcfHost));
                 Uri baseAddress = new Uri($"net.tcp://{IpAdress}:1338/Spotify");
                 NetTcpBinding binding = new NetTcpBinding();
+                binding.Security.Mode = SecurityMode.Transport;
+
                 Host.AddServiceEndpoint(typeof(IWcfHost), binding, baseAddress);
                 Host.Open();
 
@@ -141,18 +143,18 @@ namespace WcfHost
 
             new Thread(() =>
             {
-                ListeningForConnection();
+                ListeningForConnectionTCP();
             }).Start();
         }
 
-        private void ListeningForConnection()
+        private void ListeningForConnectionTCP()
         {
             TcpListener.Start();
             try
             {
                 while (!CloseApplication)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(50);
                     //blocks until a client has connected to the server
                     if (TcpListener.Pending())
                     {
@@ -269,7 +271,5 @@ namespace WcfHost
             Console.WriteLine($"<{tempMember.Name}> hat sich angemeldet");
             ServerVM.WriteToLog($"<{tempMember.Name}> hat sich angemeldet");
         }
-
-
     }
 }

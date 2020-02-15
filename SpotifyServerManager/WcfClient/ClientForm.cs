@@ -187,6 +187,8 @@ namespace WcfClient
             Uri baseAddress = new Uri($"net.tcp://{ConnectionString}:1338/Spotify");
             EndpointAddress address = new EndpointAddress(baseAddress);
             NetTcpBinding binding = new NetTcpBinding();
+            binding.Security.Mode = SecurityMode.Transport;
+
             ChannelFactory<IWcfHost> factory = new ChannelFactory<IWcfHost>(binding, address);
             Host = factory.CreateChannel();
 
