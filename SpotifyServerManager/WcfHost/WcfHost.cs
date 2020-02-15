@@ -263,7 +263,7 @@ namespace WcfHost
             string msg = $"<{DateTime.Now}> Willkommen <{tempMember.Name}>. Sie wurden vom Server erfasst";
 
             // Nachricht wird an Client gesendet
-            tempMember.SendToClient(msg);
+            //tempMember.SendToClient(msg);
 
             Thread.Sleep(50);
             Console.WriteLine($"<{tempMember.Name}> hat sich angemeldet");
