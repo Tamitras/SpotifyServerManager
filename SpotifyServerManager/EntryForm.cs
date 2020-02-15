@@ -23,7 +23,11 @@ namespace ShortCutSpotify
 
         private void Application_ApplicationExit(object sender, EventArgs e)
         {
-            Host.CloseApplication = true;
+            if (Host != null)
+            {
+                Host.CloseApplication = true;
+            }
+
             this.Dispose();
             Application.Exit();
         }

@@ -36,9 +36,20 @@ namespace WcfClient
 
         private void Application_ApplicationExit(object sender, EventArgs e)
         {
-            Host.Exit(GetIpAdress().ToString());
-            Application.Exit();
+            if (Host != null)
+            {
+                try
+                {
+                    Host.Exit(GetIpAdress().ToString());
+                }
+                catch (Exception ex)
+                {
+                    // Server wurde geschlossen!
+                }
+            }
+
             CloseApplication = true;
+            Application.Exit();
         }
 
         private void Init()
@@ -76,8 +87,8 @@ namespace WcfClient
                 Int32 port = 1337;
                 TcpClient client = new TcpClient("localhost", port);
                 NetworkStream stream = client.GetStream();
-                ASCIIEncoding encoder = new ASCIIEncoding();        
-                
+                ASCIIEncoding encoder = new ASCIIEncoding();
+
                 Thread.Sleep(20);
 
                 // Überlieferung des Hostnames

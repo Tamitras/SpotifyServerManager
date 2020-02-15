@@ -24,17 +24,24 @@ namespace WcfHost.Models
 
         public void SendToClient(string msg)
         {
-            ASCIIEncoding encoder = new ASCIIEncoding();
-            // Begrüßung des Members
-            Byte[] bufferToClient = encoder.GetBytes(msg);
-
-            if (this.TcpClient.Connected)
+            try
             {
-                // Nachricht wird an Client gesendet
-                this.TcpClient.GetStream().Write(bufferToClient, 0, bufferToClient.Length);
-                this.TcpClient.GetStream().Flush();
+                ASCIIEncoding encoder = new ASCIIEncoding();
+                // Begrüßung des Members
+                Byte[] bufferToClient = encoder.GetBytes(msg);
+
+                if (this.TcpClient.Connected)
+                {
+                    // Nachricht wird an Client gesendet
+                    this.TcpClient.GetStream().Write(bufferToClient, 0, bufferToClient.Length);
+                    this.TcpClient.GetStream().Flush();
+                }
+                else
+                {
+                    Console.WriteLine("Client not connected");
+                }
             }
-            else
+            catch (Exception)
             {
                 Console.WriteLine("Client not connected");
             }
