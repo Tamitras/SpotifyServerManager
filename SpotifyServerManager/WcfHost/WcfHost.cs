@@ -20,7 +20,7 @@ namespace WcfHost
         private IPAddress IpAdress { get; set; }
         private List<SocketMember> ListOfAllConnectedMember { get; set; }
         private TcpListener TcpListener { get; set; }
-        private ServiceHost Host { get; set; }
+        private ServiceHost WcfServiceHost { get; set; }
 
         private SpotifyProvider SpotifyProvider { get; set; }
 
@@ -86,23 +86,25 @@ namespace WcfHost
 
                 var adresses = Dns.GetHostAddresses(Dns.GetHostName());
                 var ipAdresses = adresses.Where(c => c.AddressFamily == AddressFamily.InterNetwork).ToList();
-                IpAdress = ipAdresses.Where(c => c.Address.ToString().StartsWith("192")).FirstOrDefault();
+                IpAdress = ipAdresses.FirstOrDefault();
+
+                ServerVM.WriteToLog($"Server-Hostname: {Dns.GetHostName()}");
+                ServerVM.WriteToLog($"Server-IpAdress: {IpAdress}");
 
                 ListOfAllConnectedMember = new List<SocketMember>();
-                TcpListener = new TcpListener(IPAddress.Any, 1337);
+
                 StartListenForConnection();
 
-                Host = new ServiceHost(typeof(WcfHost));
+                WcfServiceHost = new ServiceHost(typeof(WcfHost));
                 Uri baseAddress = new Uri($"net.tcp://{IpAdress}:1338/Spotify");
+                ServerVM.WriteToLog($"BaseAdress: {baseAddress}");
                 NetTcpBinding binding = new NetTcpBinding();
-                binding.Security.Mode = SecurityMode.Transport;
+                binding.Security.Mode = SecurityMode.None;
+                binding.Security.Message.ClientCredentialType = MessageCredentialType.None;
 
-                Host.AddServiceEndpoint(typeof(IWcfHost), binding, baseAddress);
-                Host.Open();
-
-                ServerVM.WriteToLog("Wcf Dienst gestartet");
-                ServerVM.WriteToLog("Server wurde gestartet");
-                ServerVM.WriteToLog("Server horcht auf Port: " + TcpListener.LocalEndpoint);
+                WcfServiceHost.AddServiceEndpoint(typeof(IWcfHost), binding, baseAddress);
+                WcfServiceHost.Open();
+                ServerVM.WriteToLog($"WCF-Service gestartet.\nPort: 1338");
 
             }
             catch (Exception ex)
@@ -130,7 +132,7 @@ namespace WcfHost
 
             Console.WriteLine("exit");
             UdpClient.Close();
-            Host.Close();
+            WcfServiceHost.Close();
             // Benachrichtige alle Member, dass der Server geschlossen wird, also schließe auch alle Verbindungen.
         }
 
@@ -138,23 +140,27 @@ namespace WcfHost
         {
             new Thread(() =>
             {
+                ServerVM.WriteToLog("Starte Thread für UDP Listening");
                 WaitForClientRequest_UDP();
             }).Start();
 
             new Thread(() =>
             {
+                ServerVM.WriteToLog("Starte Thread für TCP Listening");
                 ListeningForConnectionTCP();
             }).Start();
         }
 
         private void ListeningForConnectionTCP()
         {
-            TcpListener.Start();
             try
             {
+                TcpListener = new TcpListener(IPAddress.Any, 1337);
+                TcpListener.Start();
+                ServerVM.WriteToLog($"TCP-Server gestartet.\nPort: 1337");
                 while (!CloseApplication)
                 {
-                    Thread.Sleep(50);
+                    Thread.Sleep(20);
                     //blocks until a client has connected to the server
                     if (TcpListener.Pending())
                     {
@@ -209,12 +215,15 @@ namespace WcfHost
                     UdpClient = new UdpClient();
                     Byte[] myBuffer = new Byte[4096];
 
-                    IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 1337);
+                    IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 1336);
                     UdpClient.Client.Bind(remoteEndPoint);
+                    ServerVM.WriteToLog($"UdpClient wurde geöffnet: Port: {1336}");
                     Console.WriteLine(DateTime.Now + " >>>>>>>>>>> " + "Waiting for BroadcastMessages..." + "<<<<<<<<<<");
+                    ServerVM.WriteToLog(" >>>>>>>>>>> " + "Waiting for BroadcastMessages..." + "<<<<<<<<<<");
                     myBuffer = UdpClient.Receive(ref remoteEndPoint);
                     Console.WriteLine(Environment.NewLine + seperator);
                     Console.WriteLine(DateTime.Now + " Eine Anfrage kam von: " + remoteEndPoint);
+                    ServerVM.WriteToLog(" Eine Anfrage kam von: " + remoteEndPoint);
 
                     ASCIIEncoding encoder = new ASCIIEncoding();
                     String messageFromUdp = encoder.GetString(myBuffer);
@@ -223,6 +232,7 @@ namespace WcfHost
                     messageFromUdp.Trim();
 
                     Console.WriteLine(DateTime.Now + " Empfanges Schlüsselwort: " + messageFromUdp.Trim() + " von: " + IpAdress.ToString());
+                    ServerVM.WriteToLog(" Empfanges Schlüsselwort: " + messageFromUdp.Trim() + " von: " + IpAdress.ToString());
                     Byte[] bufferToClient = new Byte[0];
                     if (messageFromUdp.Contains("<Server>")) //Server-Anfrage
                     {
@@ -235,6 +245,7 @@ namespace WcfHost
                             + "\" "
                             + "an: "
                             + IpAdress.ToString());
+                        ServerVM.WriteToLog(" Gesendeter Broadcast: "+ "\""+ IpAdress.ToString()+ "\" "+ "an: "+ IpAdress.ToString());
                     }
                     else
                     {
@@ -244,6 +255,7 @@ namespace WcfHost
                     Console.WriteLine(seperator + Environment.NewLine);
                     messageFromUdp = String.Empty;
                     UdpClient.Close();
+                    ServerVM.WriteToLog("UdpClient wurde geschlossen");
                 }
             }
             catch (Exception ex)
@@ -262,14 +274,12 @@ namespace WcfHost
                 tempMember.Name = tempMember.Name.Split('\0').First();
             }
 
-            string msg = $"<{DateTime.Now}> Willkommen <{tempMember.Name}>. Sie wurden vom Server erfasst";
+            string msg = $"Willkommen <{tempMember.Name}>. Sie wurden vom Server erfasst";
 
             // Nachricht wird an Client gesendet
             //tempMember.SendToClient(msg);
 
-            Thread.Sleep(50);
-            Console.WriteLine($"<{tempMember.Name}> hat sich angemeldet");
-            ServerVM.WriteToLog($"<{tempMember.Name}> hat sich angemeldet");
+            ServerVM.WriteToLog(msg);
         }
     }
 }

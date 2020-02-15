@@ -78,12 +78,12 @@ namespace WcfClient
         /// <summary>
         /// Init-Methode
         /// </summary>
-        public void GetNetworkServerAdress()
+        public void GetNetworkServerAdressOverUDP()
         {
             UDPMessage message = new UDPMessage();
             UdpClient udpClient = new UdpClient();
             udpClient.Client.ReceiveTimeout = 5000;
-            IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 1337);
+            IPEndPoint remoteEndPoint = new IPEndPoint(IPAddress.Any, 1336);
             BroadCastSend(message, udpClient, remoteEndPoint);
         }
 
@@ -95,13 +95,13 @@ namespace WcfClient
 
             new Thread(() =>
             {
-                this.GetNetworkServerAdress();
-                this.ConnectToSocketServer();
+                this.GetNetworkServerAdressOverUDP();
+                this.ConnectToTCPSocketServer();
             }).Start();
 
             new Thread(() =>
             {
-                this.ConnectToTcpServer();
+                this.ConnectToWCFService();
             }).Start();
         }
 
@@ -119,7 +119,7 @@ namespace WcfClient
             this.IPAddress = ipAdress;
         }
 
-        private void ConnectToSocketServer()
+        private void ConnectToTCPSocketServer()
         {
             try
             {
@@ -142,7 +142,7 @@ namespace WcfClient
 
                 while (!CloseApplication)
                 {
-                    WaitForServerMessages(client, stream);
+                    WaitForTCPSocketServerMessages(client, stream);
                 }
 
             }
@@ -152,9 +152,9 @@ namespace WcfClient
             }
         }
 
-        private void WaitForServerMessages(TcpClient client, NetworkStream stream)
+        private void WaitForTCPSocketServerMessages(TcpClient client, NetworkStream stream)
         {
-            Thread.Sleep(200);
+            Thread.Sleep(1000);
 
             if (stream.DataAvailable
                 && client.Connected)
@@ -177,19 +177,20 @@ namespace WcfClient
             }
         }
 
-        private void ConnectToTcpServer()
+        private void ConnectToWCFService()
         {
             while (string.IsNullOrEmpty(ConnectionString))
             {
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
             }
 
-            Thread.Sleep(1000);
+            Thread.Sleep(500);
 
             Uri baseAddress = new Uri($"net.tcp://{ConnectionString}:1338/Spotify");
             EndpointAddress address = new EndpointAddress(baseAddress);
             NetTcpBinding binding = new NetTcpBinding();
-            binding.Security.Mode = SecurityMode.Transport;
+            binding.Security.Mode = SecurityMode.None;
+            binding.Security.Message.ClientCredentialType = MessageCredentialType.None;
 
             ChannelFactory<IWcfHost> factory = new ChannelFactory<IWcfHost>(binding, address);
             Host = factory.CreateChannel();

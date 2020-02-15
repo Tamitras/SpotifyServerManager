@@ -26,7 +26,7 @@ namespace WcfClient.UDP
         public UDPMessage()
         {
             Data = "<Server>";
-            Port = 1337;
+            Port = 1336;
             TargetAddress = "255.255.255.255";
             Encoder = new ASCIIEncoding();
             DataInBytes = new Byte[4096];
