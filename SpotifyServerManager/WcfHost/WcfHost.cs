@@ -8,6 +8,8 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Http;
+using System.Web.Http.SelfHost;
 using WcfHost.Interface;
 using WcfHost.Models;
 
@@ -27,6 +29,8 @@ namespace WcfHost
         private ServiceHost WcfServiceHost { get; set; }
         private SpotifyProvider SpotifyProvider { get; set; }
         private UdpClient UdpClient { get; set; }
+
+        private HttpSelfHostServer SelfHostServer { get; set; }
 
         public static ServerVM ServerVM { get; set; } = new ServerVM();
         public WcfHost()
@@ -62,7 +66,7 @@ namespace WcfHost
         {
             var member = ServerVM.ConnectedMembers.Where(c => c.IPAddress.Equals(ipAdress)).SingleOrDefault();
             string res = await SpotifyProvider.PerformPlayAsync();
-            if(member != null)
+            if (member != null)
             {
                 ServerVM.WriteToLog($"{member.Hostname} hat Pause/Play gedrückt");
             }
@@ -121,6 +125,18 @@ namespace WcfHost
                 WcfServiceHost.Open();
                 ServerVM.WriteToLog($"WCF-Service gestartet.\nPort: 1338");
 
+                new Thread(() =>
+                {
+                    var config = new HttpSelfHostConfiguration("http://localhost:8082");
+                    config.Routes.MapHttpRoute("API Default", "api/{controller}/{action}/{id}", new { id = RouteParameter.Optional });
+
+                    SelfHostServer = new HttpSelfHostServer(config);
+                    SelfHostServer.OpenAsync().Wait();
+
+                    ServerVM.WriteToLog($"HTTP Server started....");
+                }).Start();
+
+
             }
             catch (Exception ex)
             {
@@ -148,6 +164,7 @@ namespace WcfHost
             Console.WriteLine("exit");
             UdpClient.Close();
             WcfServiceHost.Close();
+            SelfHostServer.CloseAsync();
             // Benachrichtige alle Member, dass der Server geschlossen wird, also schließe auch alle Verbindungen.
         }
 
@@ -260,7 +277,7 @@ namespace WcfHost
                             + "\" "
                             + "an: "
                             + IpAdress.ToString());
-                        ServerVM.WriteToLog(" Gesendeter Broadcast: "+ "\""+ IpAdress.ToString()+ "\" "+ "an: "+ IpAdress.ToString());
+                        ServerVM.WriteToLog(" Gesendeter Broadcast: " + "\"" + IpAdress.ToString() + "\" " + "an: " + IpAdress.ToString());
                     }
                     else
                     {
