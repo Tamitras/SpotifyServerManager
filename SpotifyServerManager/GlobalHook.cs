@@ -93,7 +93,8 @@ namespace ShortCutSpotify
                         KeyUp(this, kea);
                     }
                     if (kea.Handled)
-                        return 1;
+                        //return 1;
+                        CallNextHookEx(hhook, code, wParam, ref lParam);
                 }
             }
             return CallNextHookEx(hhook, code, wParam, ref lParam);

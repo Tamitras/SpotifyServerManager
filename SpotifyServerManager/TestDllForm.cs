@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -47,7 +48,7 @@ namespace ShortCutSpotify
             GlobalHook.HookedKeys.Add(Keys.Space);
 
             GlobalHook.KeyDown += new KeyEventHandler(hook_KeyDown); //Taste wird gedrückt
-            GlobalHook.KeyUp += new KeyEventHandler(hook_KeyUp); //Taste wird losgelassen
+            //GlobalHook.KeyUp += new KeyEventHandler(hook_KeyUp); //Taste wird losgelassen
         }
 
         async void hook_KeyDown(object sender, KeyEventArgs e)
@@ -60,8 +61,10 @@ namespace ShortCutSpotify
                 {
                     case Keys.Space:
                         ControlButtonPressed = false;
+
                         Console.WriteLine("PauseStopp Performed");
                         this.textBoxCurrentSongName.Text = await SpotifyProvider.PerformPlayAsync();
+
                         e.Handled = true;
                         return;
                     case Keys.End:
@@ -97,21 +100,12 @@ namespace ShortCutSpotify
                 }
             }
 
-            if(Keys.LShiftKey == e.KeyCode)
+            if (Keys.LShiftKey == e.KeyCode)
             {
                 ControlButtonPressed = true;
                 e.Handled = true;
             }
         }
-
-        void hook_KeyUp(object sender, KeyEventArgs e)
-        {
-            ControlButtonPressed = false;
-
-            //Dein Code
-            e.Handled = true;
-        }
-
 
         /// <summary>
         /// NEXT SONG
@@ -161,6 +155,7 @@ namespace ShortCutSpotify
         private void buttonIncreaseVolume_Click(object sender, EventArgs e)
         {
             SpotifyProvider.PerformIncreaseVolume();
+
         }
 
         /// <summary>

@@ -8,6 +8,8 @@ using System.ServiceModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web.Http;
+using System.Web.Http.SelfHost;
 using WcfHost.Interface;
 using WcfHost.Models;
 
@@ -18,30 +20,41 @@ namespace WcfHost
     {
         public bool CloseApplication { get; set; }
         private IPAddress IpAdress { get; set; }
+
+        /// <summary>
+        ///  Werden nur für die TCP Kommunikation verwendet
+        /// </summary>
         private List<SocketMember> ListOfAllConnectedMember { get; set; }
         private TcpListener TcpListener { get; set; }
         private ServiceHost WcfServiceHost { get; set; }
-
         private SpotifyProvider SpotifyProvider { get; set; }
-
         private UdpClient UdpClient { get; set; }
+
+        private HttpSelfHostServer SelfHostServer { get; set; }
 
         public static ServerVM ServerVM { get; set; } = new ServerVM();
         public WcfHost()
         {
+            // Zur Verwendung von Spotify
             SpotifyProvider = new SpotifyProvider();
             SpotifyProvider.Connect();
         }
 
-        public bool Register(IPAddress ipAdress, string username, out string message)
+        /// <summary>
+        /// Registriert den Benutzer am WCF Service
+        /// </summary>
+        /// <param name="ipAdress">Ip Adresse</param>
+        /// <param name="hostname">Name des Rechners</param>
+        /// <param name="message">Optionale Nachricht</param>
+        /// <returns></returns>
+        public bool Register(IPAddress ipAdress, string hostname, out string message)
         {
-            Console.WriteLine($"Benutzer mit der IP: {ipAdress} hat sich erfolgreich am Server registriert");
-            message = "Hier könnte ihre Werbung stehen";
+            message = string.Empty;
 
             ServerVM.AddUser(
-                new TcpMember()
+                new WcfMember()
                 {
-                    Hostname = username,
+                    Hostname = hostname,
                     IPAddress = ipAdress,
                     LoginDate = DateTime.Now
                 });
@@ -51,7 +64,13 @@ namespace WcfHost
 
         public async Task<string> PausePlay(IPAddress ipAdress, string hostname)
         {
+            var member = ServerVM.ConnectedMembers.Where(c => c.IPAddress.Equals(ipAdress)).SingleOrDefault();
             string res = await SpotifyProvider.PerformPlayAsync();
+            if (member != null)
+            {
+                ServerVM.WriteToLog($"{member.Hostname} hat Pause/Play gedrückt");
+            }
+
             return res;
         }
 
@@ -106,6 +125,18 @@ namespace WcfHost
                 WcfServiceHost.Open();
                 ServerVM.WriteToLog($"WCF-Service gestartet.\nPort: 1338");
 
+                new Thread(() =>
+                {
+                    var config = new HttpSelfHostConfiguration("http://localhost:8082");
+                    config.Routes.MapHttpRoute("API Default", "api/{controller}/{action}/{id}", new { id = RouteParameter.Optional });
+
+                    SelfHostServer = new HttpSelfHostServer(config);
+                    SelfHostServer.OpenAsync().Wait();
+
+                    ServerVM.WriteToLog($"HTTP Server started....");
+                }).Start();
+
+
             }
             catch (Exception ex)
             {
@@ -133,6 +164,7 @@ namespace WcfHost
             Console.WriteLine("exit");
             UdpClient.Close();
             WcfServiceHost.Close();
+            SelfHostServer.CloseAsync();
             // Benachrichtige alle Member, dass der Server geschlossen wird, also schließe auch alle Verbindungen.
         }
 
@@ -245,7 +277,7 @@ namespace WcfHost
                             + "\" "
                             + "an: "
                             + IpAdress.ToString());
-                        ServerVM.WriteToLog(" Gesendeter Broadcast: "+ "\""+ IpAdress.ToString()+ "\" "+ "an: "+ IpAdress.ToString());
+                        ServerVM.WriteToLog(" Gesendeter Broadcast: " + "\"" + IpAdress.ToString() + "\" " + "an: " + IpAdress.ToString());
                     }
                     else
                     {

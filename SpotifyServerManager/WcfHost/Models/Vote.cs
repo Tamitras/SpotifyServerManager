@@ -10,7 +10,7 @@ namespace WcfHost.Models
     {
         public string SongName { get; set; }
 
-        public TcpMember VotetBy { get; set; }
+        public WcfMember VotetBy { get; set; }
 
         public DateTime VoteDate { get; set; }
 

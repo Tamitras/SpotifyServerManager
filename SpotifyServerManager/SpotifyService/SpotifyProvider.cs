@@ -80,8 +80,14 @@ namespace SpotifyService
         {
             IntPtr mainWindowHandle = SpotifyProcess.MainWindowHandle;
             //SetLayeredWindowAttributes(this.SpotifyProcess.MainWindowHandle, 0, 0, LWA_ALPHA);
-            SetForegroundWindow(mainWindowHandle);
-            ShowWindow(mainWindowHandle, WindowState.ShowDefault);
+
+            WINDOWPLACEMENT param = new WINDOWPLACEMENT();
+            param.rcNormalPosition = new Rectangle(new Point(0, -2000), new Size(0, 0));
+            param.length = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
+            param.showCmd = (int)WindowState.ShowDefault;
+
+            SetWindowPlacement(mainWindowHandle, ref param);
+            Thread.Sleep(1000);
         }
 
         public void ResetWindow()
@@ -98,19 +104,19 @@ namespace SpotifyService
             SetWindowPlacement(mainWindowHandle, ref param);
         }
 
-        private void HideWindow()
+        private void HideWindow() 
         {
             IntPtr mainWindowHandle = SpotifyProcess.MainWindowHandle;
-
-            //SetLayeredWindowAttributes(this.SpotifyProcess.MainWindowHandle, 0, 255, LWA_ALPHA);
-            ShowWindow(mainWindowHandle, WindowState.ShowDefault);
+            SetLayeredWindowAttributes(this.SpotifyProcess.MainWindowHandle, 0, 0, LWA_ALPHA);
 
             WINDOWPLACEMENT param = new WINDOWPLACEMENT();
-            param.rcNormalPosition = new Rectangle(new Point(-25000, -25000), new Size(100, 100));
+            param.rcNormalPosition = new Rectangle(new Point(1500, 0), new Size(0, 0));
             param.length = Marshal.SizeOf(typeof(WINDOWPLACEMENT));
             param.showCmd = (int)WindowState.Minimize;
             SetWindowPlacement(mainWindowHandle, ref param);
 
+            SetLayeredWindowAttributes(this.SpotifyProcess.MainWindowHandle, 0, 255, LWA_ALPHA);
+            //Thread.Sleep(500);
         }
 
         public Task<string> PerformPlayAsync()
@@ -123,7 +129,6 @@ namespace SpotifyService
                 uint keydown = 0x0100;
                 uint keyup = 0x0200;
                 Process p = this.SpotifyProcess;
-                //p.WaitForInputIdle();
 
                 this.ShowWindow();
                 PostMessage(p.MainWindowHandle, keydown, (int)Keys.Space, 0);

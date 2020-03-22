@@ -10,7 +10,7 @@ namespace WcfHost
 {
     public class ServerVM
     {
-        public List<TcpMember> ConnectedMembers { get; set; }
+        public List<WcfMember> ConnectedMembers { get; set; }
 
         public delegate void LogHasChangedDelegate(string msg);
         public event LogHasChangedDelegate LogHasChanged;
@@ -20,10 +20,10 @@ namespace WcfHost
 
         public ServerVM()
         {
-            this.ConnectedMembers = new List<TcpMember>();
+            this.ConnectedMembers = new List<WcfMember>();
         }
 
-        public void AddUser(TcpMember member)
+        public void AddUser(WcfMember member)
         {
             this.ConnectedMembers.Add(member);
             this.MemberHasChanged();
